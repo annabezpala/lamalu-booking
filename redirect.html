@@ -2,130 +2,180 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>LamaLu — Запис до фахівця</title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f7fa;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
-    .card{background:white;border-radius:20px;padding:36px 28px;max-width:380px;width:100%;text-align:center;box-shadow:0 2px 24px rgba(0,0,0,.07)}
-    .logo{font-size:52px;margin-bottom:8px}
-    .clinic{font-size:12px;color:#aaa;margin-bottom:20px;text-transform:uppercase;letter-spacing:.5px}
-    .service-box{background:#eef6fd;border:1.5px solid #b8daf5;border-radius:12px;padding:14px 18px;margin-bottom:16px}
-    .service-name{font-size:16px;font-weight:600;color:#1565c0}
-    .specialist{font-size:13px;color:#666;margin-top:4px}
-    .step{display:flex;align-items:flex-start;gap:10px;text-align:left;padding:9px 0;border-bottom:1px solid #f0f0f0}
-    .step:last-child{border-bottom:none}
-    .num{width:22px;height:22px;background:#168acd;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
-    .step p{font-size:13.5px;color:#333;line-height:1.5}
-    .step b{color:#1565c0}
-    .btn{display:block;width:100%;margin-top:22px;padding:14px;background:#168acd;color:white;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
-    .btn:hover{background:#1278b0}
-    .btn:disabled{background:#90c4e4;cursor:default}
-    #msg{font-size:13px;margin-top:12px;padding:9px 12px;border-radius:8px;display:none;text-align:left}
-    .ok{display:block!important;background:#e8f5e9;color:#2e7d32}
-    .go{display:block!important;background:#e3f2fd;color:#1565c0}
-    .no{display:block!important;background:#fff8e1;color:#e65100}
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* Сплеш-екран */
+    #splash {
+      position: fixed; inset: 0; z-index: 999;
+      background: #f5f7fa;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      transition: opacity 0.4s ease;
+    }
+    #splash.hidden { opacity: 0; pointer-events: none; }
+    .logo { font-size: 56px; margin-bottom: 8px; }
+    .clinic { font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 28px; }
+    .card {
+      background: white; border-radius: 16px; padding: 24px 22px;
+      width: min(340px, 90vw); box-shadow: 0 2px 20px rgba(0,0,0,.08);
+    }
+    .svc-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+    .svc-name { font-size: 17px; font-weight: 600; color: #1565c0; margin-bottom: 4px; }
+    .svc-spec { font-size: 13px; color: #666; margin-bottom: 18px; }
+    .progress-wrap { background: #e8f4fd; border-radius: 8px; height: 6px; overflow: hidden; margin-bottom: 12px; }
+    .progress-bar { height: 100%; background: #168acd; border-radius: 8px; width: 0%; transition: width 0.3s ease; }
+    .status { font-size: 13px; color: #888; text-align: center; }
+    .status.ok { color: #2e7d32; }
+
+    /* iframe Lakmus */
+    #lakmus-frame {
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      border: none; display: none;
+    }
   </style>
 </head>
 <body>
-<div class="card">
+
+<div id="splash">
   <div class="logo">🦙</div>
   <div class="clinic">LamaLu Clinic</div>
-
-  <div class="service-box">
-    <div class="service-name" id="svc">Завантаження...</div>
-    <div class="specialist" id="spec"></div>
+  <div class="card">
+    <div class="svc-label">Направлення до фахівця</div>
+    <div class="svc-name" id="svc-name">Завантаження...</div>
+    <div class="svc-spec" id="svc-spec"></div>
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progress"></div>
+    </div>
+    <div class="status" id="status">Відкриваємо форму запису...</div>
   </div>
-
-  <div style="font-size:13px;color:#888;text-align:left;margin-bottom:8px">Що відбудеться:</div>
-  <div class="step"><div class="num">1</div><p>Відкриється сторінка запису Lakmus</p></div>
-  <div class="step"><div class="num">2</div><p>Поле пошуку заповниться автоматично: <b id="hint">...</b></p></div>
-  <div class="step"><div class="num">3</div><p>Оберіть зручний час і запишіться</p></div>
-
-  <button id="btn" class="btn" onclick="go()">📅 Відкрити запис</button>
-  <div id="msg"></div>
 </div>
 
+<iframe id="lakmus-frame"
+  src="https://booking.lakmus.org/?client=lamalu&defaultAppointmentType=appointment&defaultPaymentSource=inclinic"
+  allow="same-origin">
+</iframe>
+
 <script>
-const LAKMUS = 'https://booking.lakmus.org/?client=lamalu&defaultAppointmentType=appointment&defaultPaymentSource=inclinic';
-const p = new URLSearchParams(location.search);
-const search = p.get('search') || '';
-const spec = p.get('specialist') || '';
+  const SEARCH_KEY = 'lamalu_search';
+  const params = new URLSearchParams(location.search);
+  const search = params.get('search') || '';
+  const specialist = params.get('specialist') || '';
 
-document.getElementById('svc').textContent = search || 'Онлайн запис';
-document.getElementById('hint').textContent = search ? '"' + search + '"' : '—';
-if (spec) document.getElementById('spec').textContent = 'Фахівець: ' + spec;
-
-function msg(text, cls) {
-  const el = document.getElementById('msg');
-  el.textContent = text;
-  el.className = cls;
-}
-
-function inject(win, query, attempt) {
-  if (attempt > 50) { msg('Lakmus відкрито. Знайдіть: "' + query + '"', 'no'); return; }
-  try {
-    const doc = win.document;
-    if (!doc || !doc.body || doc.body.innerHTML.length < 200) {
-      setTimeout(() => inject(win, query, attempt + 1), 200); return;
-    }
-    const input = doc.querySelector('input[placeholder*="Пошук"]');
-    if (!input) {
-      setTimeout(() => inject(win, query, attempt + 1), 200); return;
-    }
-    // Angular-сумісне заповнення
-    const setter = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set;
-    setter.call(input, query);
-    input.dispatchEvent(new win.Event('input', { bubbles: true }));
-    input.dispatchEvent(new win.Event('change', { bubbles: true }));
-    input.dispatchEvent(new win.KeyboardEvent('keyup', { bubbles: true }));
-    msg('✅ Пошук заповнено! Перейдіть у вікно Lakmus.', 'ok');
-  } catch(e) {
-    // Cross-origin — пишемо через iframe в localStorage Lakmus
-    injectViaIframe(query);
+  // Заповнюємо сплеш
+  document.getElementById('svc-name').textContent = search || 'Онлайн запис';
+  if (specialist) {
+    document.getElementById('svc-spec').textContent = 'Фахівець: ' + specialist;
   }
-}
 
-function injectViaIframe(query) {
-  // Записуємо пошук в localStorage booking.lakmus.org через прихований iframe
-  const frame = document.createElement('iframe');
-  frame.style.display = 'none';
-  frame.src = 'https://booking.lakmus.org/';
-  frame.onload = function() {
+  const progressEl = document.getElementById('progress');
+  const statusEl = document.getElementById('status');
+
+  function setProgress(pct) { progressEl.style.width = pct + '%'; }
+  function setStatus(msg, ok) {
+    statusEl.textContent = msg;
+    statusEl.className = 'status' + (ok ? ' ok' : '');
+  }
+
+  // Крок 1: Записуємо search в localStorage Lakmus через прихований iframe
+  function writeToStorage(callback) {
+    setProgress(20);
+    setStatus('Підготовка...');
+    if (!search) { callback(); return; }
+
+    const helper = document.createElement('iframe');
+    helper.style.display = 'none';
+    helper.src = 'https://booking.lakmus.org/';
+    helper.onload = function() {
+      try {
+        helper.contentWindow.localStorage.setItem(SEARCH_KEY, search);
+        setProgress(50);
+        setStatus('Відкриваємо Lakmus...');
+      } catch(e) {
+        // якщо не вдалось — просто продовжуємо
+      }
+      document.body.removeChild(helper);
+      callback();
+    };
+    helper.onerror = function() {
+      document.body.removeChild(helper);
+      callback();
+    };
+    document.body.appendChild(helper);
+  }
+
+  // Крок 2: inject в основний iframe Lakmus
+  function injectIntoFrame(frame, query, attempt) {
+    if (attempt > 80) {
+      showLakmus();
+      return;
+    }
     try {
-      frame.contentWindow.localStorage.setItem('lamalu_search', query);
-      msg('✅ Пошук збережено! Перейдіть у вікно Lakmus і натисніть F5.', 'ok');
+      const win = frame.contentWindow;
+      const doc = win.document;
+      if (!doc || !doc.body || doc.body.innerHTML.length < 300) {
+        setTimeout(() => injectIntoFrame(frame, query, attempt + 1), 150);
+        return;
+      }
+      const input = doc.querySelector('input[placeholder*="Пошук"]');
+      if (!input) {
+        setTimeout(() => injectIntoFrame(frame, query, attempt + 1), 150);
+        return;
+      }
+      // Angular inject
+      const setter = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set;
+      setter.call(input, query);
+      input.dispatchEvent(new win.Event('input', { bubbles: true }));
+      input.dispatchEvent(new win.Event('change', { bubbles: true }));
+      input.dispatchEvent(new win.KeyboardEvent('keyup', { bubbles: true }));
+      // Очищаємо LS
+      try { win.localStorage.removeItem(SEARCH_KEY); } catch(e) {}
+      setProgress(100);
+      setStatus('Готово!', true);
+      setTimeout(showLakmus, 400);
     } catch(e) {
-      msg('Lakmus відкрито. Знайдіть у пошуку: "' + query + '"', 'no');
+      setTimeout(() => injectIntoFrame(frame, query, attempt + 1), 150);
     }
-    document.body.removeChild(frame);
-  };
-  frame.onerror = function() {
-    msg('Lakmus відкрито. Знайдіть у пошуку: "' + query + '"', 'no');
-    document.body.removeChild(frame);
-  };
-  document.body.appendChild(frame);
-}
-
-function go() {
-  const btn = document.getElementById('btn');
-  btn.disabled = true;
-  btn.textContent = '⏳ Відкриваємо...';
-
-  const win = window.open(LAKMUS, '_blank');
-  btn.textContent = '📅 Відкрити запис';
-  btn.disabled = false;
-
-  if (!win) {
-    msg('⚠️ Pop-up заблоковано. Дозвольте pop-up і спробуйте ще раз.', 'no');
-    return;
   }
 
-  if (!search) return;
+  function showLakmus() {
+    const splash = document.getElementById('splash');
+    splash.classList.add('hidden');
+    setTimeout(() => {
+      splash.style.display = 'none';
+      document.getElementById('lakmus-frame').style.display = 'block';
+    }, 400);
+  }
 
-  msg('Завантажуємо Lakmus...', 'go');
-  setTimeout(() => inject(win, search, 0), 500);
-}
+  // Старт
+  const frame = document.getElementById('lakmus-frame');
+
+  writeToStorage(function() {
+    setProgress(60);
+    setStatus('Завантажуємо...');
+    // Чекаємо завантаження основного iframe і робимо inject
+    frame.onload = function() {
+      setProgress(80);
+      if (search) {
+        injectIntoFrame(frame, search, 0);
+      } else {
+        setProgress(100);
+        setTimeout(showLakmus, 300);
+      }
+    };
+    // Якщо iframe вже завантажився (з кешу)
+    try {
+      if (frame.contentDocument && frame.contentDocument.body &&
+          frame.contentDocument.body.innerHTML.length > 300) {
+        setProgress(80);
+        if (search) injectIntoFrame(frame, search, 0);
+        else { setProgress(100); setTimeout(showLakmus, 300); }
+      }
+    } catch(e) {}
+  });
 </script>
 </body>
 </html>
